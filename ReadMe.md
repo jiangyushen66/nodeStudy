@@ -171,3 +171,81 @@ module.exports = app
 `router.post('/login',login)`
 
 `module.exports = router`
+
+# 6解析body
+
+## 1安装koa-body
+
+npm i koa-body
+
+## 2注册中间件
+
+![1640773840146](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\1640773840146.png)
+
+## 3解析请求数据
+
+在src/controller.js文件下
+
+`//控制器`
+
+
+
+`const {createUser} = require('../service/user.service')`
+
+`class userController{`
+
+  `async register(ctx, next){`
+
+​    `// 1,获取数据`
+
+​    `console.log(ctx.request.body)`
+
+​    `const{user_name,password} = ctx.request.body`
+
+​    `// 2，操作数据`
+
+​    `const res = await createUser(user_name,password)`
+
+​    `//3. 返回结果`
+
+​    `ctx.body = ctx.request.body`
+
+  `}`
+
+  `async login(ctx,next){`
+
+​    `ctx.body = '用户登录成功'`
+
+  `}`
+
+`}`
+
+
+
+`// 导出一个实例化的对象`
+
+
+
+`module.exports = new userController()`
+
+## 4拆分service层
+
+新建`src/service/user.service.js`
+
+
+
+`class UserService{
+
+  async createUser(username,password){
+
+​    // todo:写入数据
+
+​    return '写入数据成功'
+
+  }
+
+}
+
+
+
+module.exports = new UserService()`
