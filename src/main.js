@@ -1,12 +1,7 @@
-const Koa = require('koa')
+// 入口文件
 
 const {APP_PORT} = require('./config/config.default')
-
-const app = new Koa()
-// 创建一个中间件
-app.use((ctx,next) =>{
-    ctx.body = 'hello Vue.js'
-})
+const app = require('./app')
 
 console.log(APP_PORT)
 app.listen(APP_PORT,()=>{
