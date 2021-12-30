@@ -248,4 +248,26 @@ npm i koa-body
 
 
 
-module.exports = new UserService()`
+module.exports = new UserService()
+
+
+
+# 7集成sequelize
+
+sequelize ORM 数据库工具
+
+ORM：关系对象映射（object，relation，method）
+
+- 数据表对应一个类
+- 数据表中记录对应一个对象
+- 数据表字段对应对象的属性
+- 数据表的操作对应对象的方法
+
+
+
+1安装Sequelize和mysql2
+
+npm i mysql2 sequelize
+
+2连接数据库
+
