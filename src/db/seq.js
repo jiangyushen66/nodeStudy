@@ -13,10 +13,10 @@ const sequelize = new Sequelize(MYSQL_DB,MYSQL_USER,MYSQL_PWD,{
 
 // 测试
 
-sequelize.authenticate().then(() =>{
-    console.log('数据连接成功')
-}).catch(err => {
-    console.log('数据连接失败',err)
-})
+    // sequelize.authenticate().then(() =>{
+    //     console.log('数据连接成功')
+    // }).catch(err => {
+    //     console.log('数据连接失败',err)
+    // })
 
 module.exports = sequelize
