@@ -956,7 +956,7 @@ npm i koa-static
 
 
 
-## 19写单元测试
+# 19写单元测试
 
 在src同级目录下 新建一个文件夹test,然后编写文件上传单元测试文件file_text.html
 
@@ -976,5 +976,147 @@ npm i koa-static
 
 ![1641460373762](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\1641460373762.png)
 
-这里涉及到ajax请求头的问题。留以后在解决
+这里涉及到ajax请求头的问题。留以后在解决。
+
+这里为了解决单元测试的问题可以在调接口的时候不做授权。在router/gooods.route.js文件里修改授权
+
+将
+
+```js
+router.post('/upload', auth, hadAdminPermission, upload)
+```
+
+注释掉，改为
+
+```js
+router.post('/upload',upload)
+```
+
+这样单元测试就成功了。完成单元测试改回来注释掉的第一段。
+
+# 20文件上传接口写了一个bug
+
+### 我只要写能上传img，png其他的文件都不允许上传，而我这个只能上传所有文件
+
+在goods.controller.js文件里改一下upload接口
+
+```js
+  async upload(ctx, next) {
+
+​    // console.log(ctx.request.files)
+
+​    const { file } = ctx.request.files
+
+​    // console.log(file)
+
+​    const fileTypes = ['image/jpeg','image/png']
+
+​    if (file) {
+
+​      if(!fileTypes.includes(file.type)){
+
+​        return ctx.app.emit('error',unSupportedFileType,ctx)
+
+​      }
+
+​     ctx.body = {
+
+​      code: 0,
+
+​      message: '商品图片上传成功',
+
+​      result: {
+
+​       goods_img: path.basename(file.path),
+
+​      },
+
+​     }
+
+​    } else {
+
+​     return ctx.app.emit('error', fileUploadError, ctx)
+
+​    }
+
+   }
+
+}
+```
+
+
+
+## 1主要写了一个过滤器，
+
+```js
+ const fileTypes = ['image/jpeg','image/png']
+```
+
+​    
+
+##  2加一个条件判断， 过滤掉不符合条件的数据
+
+
+
+
+
+```js
+   
+
+​      if(!fileTypes.includes(file.type)){
+
+​        return ctx.app.emit('error',unSupportedFileType,ctx)
+
+​      }
+```
+
+# 21发布商品接口
+
+## 1安装
+
+发布商品首先要验证接口的有效性用到了 koa-parameter
+
+```js
+npm install koa-parameter
+```
+
+## 2引入
+
+app/index.js文件里引入，注意，必须在router之前use
+
+![1641473723844](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\1641473723844.png)
+
+### 3写验证函数validator，并且导出，
+
+在goods.middleware.js文件里
+
+```js
+const { goodsFormateError } = require("../constant/err.type")
+
+const validator = async (ctx, next) => {
+    try {
+        ctx.verifyParams({
+            goods_name: { type: 'string', required: true },
+            goods_price: { type: 'number', required: true },
+            goods_num: { type: 'number', required: true },
+            goods_img: { type: 'string', required: true }
+
+        })
+    } catch (err) {
+        console.error(err)
+        // return ctx.app.emit('error', err, ctx) 向postman发送错误
+        goodsFormateError.result = err
+        return ctx.app.emit('error', goodsFormateError, ctx)
+    }
+    await next()
+}
+
+module.exports = {
+    validator,
+}
+```
+
+
+
+这里需要注意的点是validator的catch(err)里，可以将err赋值给统一错误处理对象goodsFormateError的result字段，这样postman里也可以看到错误对象，不仅仅在控制台中显示了。
 
