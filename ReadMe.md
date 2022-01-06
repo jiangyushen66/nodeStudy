@@ -649,3 +649,332 @@ app/index.js改写成
 
 # 12加密
 
+在将密码保存到数据库之前，要对密码进行加密处理
+
+123123abc（加盐）加盐加密
+
+## 1安装bcryptjs
+
+`npm i bcryptjs`
+
+## 2编写代码加密中间件
+
+```js
+const cryptPassword = async (ctx,next) =>{
+    const {password} = ctx.request.body
+    const salt = bcrypt.genSaltSync(10)
+    var hash = bcrypt.hashSync(password,salt) //加盐后的密码
+    ctx.request.body.password = hash
+    await next()
+}
+
+```
+
+## 3在router中使用
+
+![1641363310089](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\1641363310089.png)
+
+# 13登录验证
+
+流程：
+
+验证格式
+
+验证用户是否存在
+
+验证密码是否匹配
+
+改写src/middleware/user.middleware.js
+
+![1641370233773](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\1641370233773.png)
+
+```js
+// 验证登录，首先验证输入是否合法，第二验证用户是否存在，第三验证密码是否匹配
+const verifyLogin = async (ctx, next) => {
+    //1判断用户是否存在（不存在，报错）
+    const { user_name, password } = ctx.request.body
+    try {
+        const res = await getUserInfo({ user_name })
+        if (!res) {
+            console.error('用户名不存在', { user_name })
+            ctx.app.emit('error', userDoesNotExist, ctx)
+            return
+        }
+        //2 密码是否匹配（不匹配，报错）
+        if (!bcrypt.compareSync(password, res.password)) {
+            ctx.app.emit('error', invalidPassword, ctx)
+            return
+        }
+    } catch (err) {
+        console.error(err)
+        return ctx.app.emit('error', userLoginError, ctx)
+    }
+    await next()
+}
+```
+
+然后导出
+
+![1641370515790](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\1641370515790.png)
+
+改写路由router/user.route.js
+
+```js
+// 登录接口
+router.post('/login',userValidator,verifyLogin,login)
+```
+# 14用户的认证
+
+登录成功后会给用户颁发一个令牌token，用户在以后的每一次请求中携带这个令牌。
+
+jwt：jsonwebtoken。 
+
+- header：头部
+- payload：荷载
+- signature：签名
+
+## 1颁发token
+
+### 1.1安装jsonwebtoken
+
+```js
+npm i jsonwebtoken
+```
+
+### 1.2在控制器中改写login方法
+
+```js
+async login(ctx, next) {
+  const { user_name } = ctx.request.body
+
+  // 1. 获取用户信息(在token的payload中, 记录id, user_name, is_admin)
+  try {
+    // 从返回结果对象中剔除password属性, 将剩下的属性放到res对象
+    const { password, ...res } = await getUerInfo({ user_name })
+
+    ctx.body = {
+      code: 0,
+      message: '用户登录成功',
+      result: {
+        token: jwt.sign(res, JWT_SECRET, { expiresIn: '1d' }),
+      },
+    }
+  } catch (err) {
+    console.error('用户登录失败', err)
+  }
+}
+```
+
+### 1.3定义私钥
+
+在.env中定义
+
+```js
+JWT_SECRET = xzd
+```
+
+## 2用户认证
+
+### 2.1创建auth文件
+
+```js
+const { TokenExpiredError } = require('jsonwebtoken')
+
+
+
+const jwt = require('jsonwebtoken')
+
+
+
+const { JWT_SECRET } = require('../config/config.default')
+
+const { tokenExpiredError,invalidToken } = require('../constant/err.type')
+
+const auth = async (ctx, next) => {
+
+  const { authorization } = ctx.request.header
+
+  const token = authorization.replace('Bearer ', '')
+
+  console.log(token)
+
+  try {
+
+​    // user中包含了payload的信息（id，is_admin，password，user_name)
+
+​    const user = jwt.verify(token, JWT_SECRET)
+
+​    ctx.state.user = user
+
+  } catch (err) {
+
+​    switch (err.name) {
+
+​      case 'TokenExpiredError':
+
+​        console.error('token已过期')
+
+​        return ctx.app.emit('error', tokenExpiredError, ctx)
+
+​        case 'JsonWebTokenError':
+
+​          console.error('无效的token',err)
+
+​          return ctx.app.emit('error',invalidToken,ctx)
+
+​    }
+
+  }
+
+  await next()
+
+}
+
+module.exports = {
+
+  auth
+
+}
+```
+
+2.2改写路由
+
+```js
+// 修改密码接口
+router.patch('/', auth, (ctx, next) => {
+  console.log(ctx.state.user)
+  ctx.body = '修改密码成功'
+})
+```
+
+# 15判断是否有管理员权限
+
+在src/middleware/auth.middleware.js文件里写入判断是否有管理员权限的方法
+
+```js
+// 判断是否有管理员的权限
+const hadAdminPermission = async (ctx,next) =>{
+    const {is_admin} = ctx.state.user
+    if(!is_admin){
+        console.error('该用户没有管理员权限',ctx.state.user)
+        return ctx.app.emit('error',hasNotAdminPermission,ctx.state.user)
+    }
+    await next()
+}
+module.exports = {
+    auth,
+    hadAdminPermission
+}
+```
+
+在goods.route.js 里调用upload接口时
+
+```js
+//先判断是否登陆，然后判断是否有管理员的权限。
+router.post('/upload', auth, hadAdminPermission, upload)
+```
+
+# 16配置文件上传的路径
+
+在app文件夹下的index.js文件里加入这些代码，将文件的上传路径改为src/upload
+
+核心代码是：uploadDir:path.join(__dirname,'../upload'), 在这里不要用相对路径。
+
+```js
+// 核心模块放第一部分
+const path = require('path')
+
+// 注册中间件，
+// 要上传文件，因此要改一下中间件的配置，用来支持上传文件，官方文档看multipart，formidable关键字
+// console.log(process.cwd()) //打印process.cwd()
+app.use(koaBody({
+    multipart :true,
+    formidable:{
+        // 在配置选项option里，不推荐使用相对路径,报错
+        // 在option里的相对路径，不是相对当前文件，而是相对process.cwd()
+        // 可用控制台打印得到的相对路径是G:\hh\workspace\nodeStudy
+        // uploadDir:'../upload',  //可以用uploadDir:'./src/upload',但是不好
+        uploadDir:path.join(__dirname,'../upload'), 
+        keepExtensions: true //是否保留原始文件的扩展
+    }
+}))
+```
+
+# 17编写文件上传接口
+
+在src/controller/goods.controller.js文件中写文件上传接口
+
+```js
+async upload(ctx, next) {
+
+​    // console.log(ctx.request.files)
+
+​    const { file } = ctx.request.files
+
+​    // console.log(file)
+
+​    const fileTypes = ['image/jpeg', 'image/png']
+
+​    if (file) {
+
+​     ctx.body = {
+
+​      code: 0,
+
+​      message: '商品图片上传成功',
+
+​      result: {
+
+​       goods_img: path.basename(file.path),
+
+​      },
+
+​     }
+
+​    } else {
+
+​     return ctx.app.emit('error', fileUploadError, ctx)
+
+​    }
+
+   }
+```
+
+# 18通过url的方法访问上传的图片
+
+## 1安装koa-static
+
+```js
+npm i koa-static
+```
+
+## 2配置koa-static
+
+在app.index.js根组件下面 
+
+![1641458524241](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\1641458524241.png)
+
+
+
+## 19写单元测试
+
+在src同级目录下 新建一个文件夹test,然后编写文件上传单元测试文件file_text.html
+
+点击上传出现错误，
+
+在live server里打开file_text.html，出现错误
+
+![1641459949761](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\1641459949761.png)
+
+意思是中间件auth里判断是否登陆，这个权限受限，不能上传，只有管理员才能上传。
+
+将权限authorization加一个默认值
+
+![1641460221662](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\1641460221662.png)
+
+但是还会在live server里有问题，
+
+![1641460373762](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\1641460373762.png)
+
+这里涉及到ajax请求头的问题。留以后在解决
+
