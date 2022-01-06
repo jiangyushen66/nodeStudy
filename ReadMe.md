@@ -1086,7 +1086,7 @@ app/index.js文件里引入，注意，必须在router之前use
 
 ![1641473723844](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\1641473723844.png)
 
-### 3写验证函数validator，并且导出，
+### 3写验证函数validator，并且导出。
 
 在goods.middleware.js文件里
 
@@ -1118,5 +1118,97 @@ module.exports = {
 
 
 
-这里需要注意的点是validator的catch(err)里，可以将err赋值给统一错误处理对象goodsFormateError的result字段，这样postman里也可以看到错误对象，不仅仅在控制台中显示了。
+这里需要注意的点是validator的catch(err)里，可以将err赋值给统一错误处理对象goodsFormateError的result字段，这样postman里也可以看到错误对象，不仅仅在控制台中显示了，注意不要将数据库里的字段啥的都传前端，否则会被黑客窃取信息。
+
+## 4写发布商品接口
+
+### 4.1先写一张mysql的goods表出来
+
+用sequelize做好关系映射，这张表包含4个字段，和俩个数据库自带的时间戳字段。
+
+在新建文件model/goods.mode.js
+
+```js
+const { DataTypes } = require('sequelize')
+const seq = require('../db/seq') //数据库连接
+
+const Goods = seq.define('zd_goods', {
+    goods_name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: '商品名称'
+    },
+    goods_price: {
+        type: DataTypes.DECIMAL,
+        allowNull: false,
+        comment: '商品价格'
+    },
+    goods_num: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        comment: '商品库存'
+    },
+    goods_img: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: '商品图片的url'
+    }
+})
+
+// Goods.sync({ force: true })
+
+module.exports = Goods
+```
+
+### 4.2做数据库操作的增删改查操作，
+
+这里是发布，用的是create,核心代码是sequelize的create方法即
+
+```
+const res = await Goods.create(goods)
+```
+
+，可以看sequelize的官方文档。
+
+新建文件service/goods.service.js
+
+```js
+const Goods = require('../model/goods.model')
+class GoodsService {
+    async createGoods(goods){
+        const res = await Goods.create(goods)
+        console.log(res)
+        return res.dataValues
+    }
+}
+
+module.exports = new GoodsService()
+```
+
+### 4.3写接口
+
+在controller/goods.controller.js中写接口create接口即商品发布接口
+
+```js
+  async create(ctx) { //控制器里可以不写next()
+        try {
+            const { createdAt, updatedAt, ...res } = await createGoods(ctx.request.body)
+            ctx.body = {
+                code: 0,
+                message: "发布商品成功",
+                result: res //发布的哪件商品
+            }
+        } catch (err) {
+            console.error(err)
+        }
+    }
+```
+
+### 4.4调用接口
+
+在router/goods.route.js文件下调用发布商品接口(create)
+
+```js
+router.post('/', auth, hadAdminPermission, validator,create)
+```
 

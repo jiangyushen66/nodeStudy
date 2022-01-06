@@ -1,46 +1,42 @@
 const path = require('path')
 const { fileUploadError, unSupportedFileType } = require('../constant/err.type')
-
+const { createGoods } = require('../service/goods.service')
 class GoodsController {
-    // async upload(ctx, next) {
-    //     // ctx.request.files拿到的是一个数组。koa-body官方文档
-    //     const { file } = ctx.request.files
-    //     if (file) {
-    //         ctx.body = {
-    //             code: 0,
-    //             message: '商品图片上传成功',
-    //             result: {
-    //                 goods_img: path.basename(file.path)
-    //             }
-    //         }
-    //     } else {
-    //         return ctx.app.emit('error', fileUploadError, ctx)
-    //     }
-    //     console.log(ctx.request.files.file)
-    //     ctx.body = '商品图片上传成功'
-    // }
-
+    // 商品上传接口
     async upload(ctx, next) {
         // console.log(ctx.request.files)
         const { file } = ctx.request.files
         // console.log(file)
-        const fileTypes = ['image/jpeg','image/png']
-       
+        const fileTypes = ['image/jpeg', 'image/png']
+
         if (file) {
-            if(!fileTypes.includes(file.type)){
-                return ctx.app.emit('error',unSupportedFileType,ctx)
+            if (!fileTypes.includes(file.type)) {
+                return ctx.app.emit('error', unSupportedFileType, ctx)
             }
-          ctx.body = {
-            code: 0,
-            message: '商品图片上传成功',
-            result: {
-              goods_img: path.basename(file.path),
-            },
-          }
+            ctx.body = {
+                code: 0,
+                message: '商品图片上传成功',
+                result: {
+                    goods_img: path.basename(file.path),
+                },
+            }
         } else {
-          return ctx.app.emit('error', fileUploadError, ctx)
+            return ctx.app.emit('error', fileUploadError, ctx)
         }
-      }
+    }
+    // 商品发布接口  
+    async create(ctx) { //控制器里可以不写next()
+        try {
+            const { createdAt, updatedAt, ...res } = await createGoods(ctx.request.body)
+            ctx.body = {
+                code: 0,
+                message: "发布商品成功",
+                result: res //发布的哪件商品
+            }
+        } catch (err) {
+            console.error(err)
+        }
+    }
 }
 
 module.exports = new GoodsController()
