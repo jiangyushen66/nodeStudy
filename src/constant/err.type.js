@@ -66,7 +66,7 @@ module.exports = {
     },
     invalidGoodsID:{
         code:'10205',
-        message:'无效的商品id',
+        message:'待修改的商品id不存在',
         result:''
     },
     cartFormatError:{

@@ -1,6 +1,6 @@
 const path = require('path')
-const { fileUploadError, unSupportedFileType } = require('../constant/err.type')
-const { createGoods } = require('../service/goods.service')
+const { fileUploadError, unSupportedFileType, invalidGoodsID} = require('../constant/err.type')
+const { createGoods ,updateGoods } = require('../service/goods.service')
 class GoodsController {
     // 商品上传接口
     async upload(ctx, next) {
@@ -34,6 +34,23 @@ class GoodsController {
                 result: res //发布的哪件商品
             }
         } catch (err) {
+            console.error(err)
+        }
+    }
+    // 修改商品接口
+    async update(ctx){
+        try{
+          const res =  await updateGoods(ctx.params.id,ctx.request.body)  // 参考koa-body的ctx.params
+          if(res){
+              ctx.body = {
+                  code:0,
+                  message:'修改商品成功',
+                  result:'',
+              }
+          }else{
+              return ctx.app.emit('error',invalidGoodsID,ctx)
+          }
+        }catch(err){
             console.error(err)
         }
     }
