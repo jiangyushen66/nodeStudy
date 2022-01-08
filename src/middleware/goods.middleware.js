@@ -7,7 +7,6 @@ const validator = async (ctx, next) => {
             goods_price: { type: 'number', required: true },
             goods_num: { type: 'number', required: true },
             goods_img: { type: 'string', required: true }
-
         })
     } catch (err) {
         console.error(err)

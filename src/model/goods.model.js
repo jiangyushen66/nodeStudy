@@ -21,7 +21,11 @@ const Goods = seq.define('zd_goods', {
         type: DataTypes.STRING,
         allowNull: false,
         comment: '商品图片的url'
-    }
+    },
+    
+},
+{
+   paranoid:true, //多这个设置，表就多一个字段，deletedAt，参考sequelize官方文档。
 })
 
 // Goods.sync({ force: true })

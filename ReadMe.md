@@ -1212,3 +1212,77 @@ module.exports = new GoodsService()
 router.post('/', auth, hadAdminPermission, validator,create)
 ```
 
+# 21修改商品接口
+
+## 1在数据库操作文件goods.service.js中添加一个修改数据库的方法
+
+```js
+  async updateGoods(id, goods) {
+
+​    const res = await Goods.update(goods, { where: { id } }) //sequelize 的查询
+
+​    return res[0] > 0? true:false //如果res[0]大于零，就更新成功，如果res[0]小于0，则更新失败。
+
+  }
+```
+
+## 2在接口文件中添加修改商品的接口
+
+```js
+    async update(ctx){
+        try{
+          const res =  await updateGoods(ctx.params.id,ctx.request.body)  // 参考koa-body的ctx.params
+          if(res){
+              ctx.body = {
+                  code:0,
+                  message:'修改商品成功',
+                  result:'',
+              }
+          }else{
+              return ctx.app.emit('error',invalidGoodsID,ctx)
+          }
+        }catch(err){
+            console.error(err)
+        }
+    }
+```
+
+## 3在路由文件中调用接口goods.router.js文件中
+
+```js
+// 修改商品接口
+router.put('/:id',auth,hadAdminPermission,validator,update)
+```
+
+# 22商品删除接口
+
+## 1先写硬删除接口，
+
+### 1.1goods.serviec.js里写硬删除数据库的方法，
+
+```js
+  async removeGoods(id) {
+
+​    const res = await Goods.destroy({ where: { id } })
+
+​    return res[0] > 0 ? true : false
+
+  }
+```
+
+### 1.2goods.controller.js里写硬删除接口
+
+### 1.3goods.router.js里写调用硬删除接口的方法
+
+## 2再写软删除
+
+### 2.1软删除，是sequelize的偏执表的知识点，核心是paranoid：true
+
+
+
+goods.model.js文件里
+
+![1641526093473](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\1641526093473.png)
+
+注意：加了paranoid：true，要将注释掉的那一段取消注释，生成表后，再又注释掉，不然每次运行文件，都生成新表，之前保存的数据就都就没了。
+
