@@ -5,7 +5,7 @@
 
 const seq = require('../db/seq')
 const { DataTypes } = require('sequelize')
-// const Goods = require('./goods.model')
+
 const Goods = require('../model/goods.model')
 
 const Cart = seq.define('zd_carts', {
@@ -34,10 +34,7 @@ const Cart = seq.define('zd_carts', {
 })
 
 // Cart.sync({ force: true })
-// Cart.belongsTo(Goods, {
-//     foreignKey: 'goods_id',
-//     as: 'goods_info'
-// })
+
 Cart.belongsTo(Goods,{
     foreignKey:'goods_id',
     as:'goods_info'

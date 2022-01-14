@@ -94,6 +94,8 @@ class GoodsController {
             message: '获取数据成功',
             result:res,
         }
+        ctx.cookies.set("user_name","zhangsan")
+    
 
     }
 
